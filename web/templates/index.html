@@ -392,8 +392,9 @@
                       <span class="text-gray-600 dark:text-gray-400">{{ tracker.percentage }}%</span>
                     </div>
                     <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                      <div class="bg-{{ tracker.color }} h-3 rounded-full"
-                           style="width: {{ tracker.percentage }}%"></div>
+                      <!-- <div class="bg-{{ tracker.color }} h-3 rounded-full"
+                        style="width: {{ tracker.percentage|float }}%;">
+                      </div>                  -->
                     </div>
                   </div>
                 {% endfor %}
@@ -684,4 +685,4 @@
       </div>
     </div>
   </main>
-{% endblock content %}
+{% endblock content %} 
