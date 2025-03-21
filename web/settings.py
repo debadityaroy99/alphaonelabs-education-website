@@ -68,6 +68,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.alphaonelabs.com",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
+    "http://127.0.0.1:8080",
+    "http://localhost:8080",
 ]
 
 # Error handling
@@ -315,26 +317,31 @@ if os.environ.get("DATABASE_URL"):
             "init_command": "SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'",
         }
 
-    # Google Cloud Storage settings for media files in production
-    if os.environ.get("GS_BUCKET_NAME"):
-        DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-        GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME")
-        GS_PROJECT_ID = os.environ.get("GS_PROJECT_ID")
+    # Google Cloud Storage settings
+    if not DEBUG:  # Only use GCS in production
+        # Google Cloud Storage settings for media files in production
+        if os.environ.get("GS_BUCKET_NAME"):
+            DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
+            GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME")
+            GS_PROJECT_ID = os.environ.get("GS_PROJECT_ID")
 
-        # Get service account file path from .env
-        service_account_filename = env.str("SERVICE_ACCOUNT_FILE")
-        SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, service_account_filename)
-        if os.path.exists(SERVICE_ACCOUNT_FILE):
-            from google.oauth2 import service_account
+            # Get service account file path from .env
+            service_account_filename = env.str("SERVICE_ACCOUNT_FILE", default="")
+            if service_account_filename and service_account_filename.strip():
+                SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, service_account_filename)
+                if os.path.exists(SERVICE_ACCOUNT_FILE):
+                    from google.oauth2 import service_account
+                    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
+                else:
+                    print(f"Warning: Service account file not found at {SERVICE_ACCOUNT_FILE}")
+                    GS_CREDENTIALS = None
+            else:
+                print("Warning: SERVICE_ACCOUNT_FILE not specified in environment variables")
+                GS_CREDENTIALS = None
 
-            GS_CREDENTIALS = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
-        else:
-            print(f"Warning: Service account file not found at {SERVICE_ACCOUNT_FILE}")
-            GS_CREDENTIALS = None
-
-        GS_DEFAULT_ACL = "publicRead"
-        GS_QUERYSTRING_AUTH = False
-        GS_LOCATION = "media"  # Store files in a media directory in the bucket
+            GS_DEFAULT_ACL = "publicRead"
+            GS_QUERYSTRING_AUTH = False
+            GS_LOCATION = "media"  # Store files in a media directory in the bucket
 
 
 # Admin URL Configuration
