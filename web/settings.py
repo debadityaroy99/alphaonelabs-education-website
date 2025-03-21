@@ -68,6 +68,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.alphaonelabs.com",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
+    "http://127.0.0.1:8080",
+    "http://localhost:8080",
 ]
 
 # Error handling
@@ -316,20 +318,18 @@ if os.environ.get("DATABASE_URL"):
         }
 
     # Google Cloud Storage settings for media files in production
-    if os.environ.get("GS_BUCKET_NAME"):
+    if os.environ.get("DATABASE_URL") and os.environ.get("GS_BUCKET_NAME"):
         DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
         GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME")
         GS_PROJECT_ID = os.environ.get("GS_PROJECT_ID")
 
         # Get service account file path from .env
-        service_account_filename = env.str("SERVICE_ACCOUNT_FILE")
-        SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, service_account_filename)
-        if os.path.exists(SERVICE_ACCOUNT_FILE):
+        SERVICE_ACCOUNT_FILE = env.str("SERVICE_ACCOUNT_FILE", default="")
+        if SERVICE_ACCOUNT_FILE and os.path.exists(SERVICE_ACCOUNT_FILE):
             from google.oauth2 import service_account
-
             GS_CREDENTIALS = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
         else:
-            print(f"Warning: Service account file not found at {SERVICE_ACCOUNT_FILE}")
+            print(f"Warning: Service account file not found or not specified")
             GS_CREDENTIALS = None
 
         GS_DEFAULT_ACL = "publicRead"
