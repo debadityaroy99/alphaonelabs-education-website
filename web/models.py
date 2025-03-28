@@ -13,7 +13,7 @@ from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.urls import reverse
 from django.utils import timezone
@@ -2786,3 +2786,13 @@ class ScheduledPost(models.Model):
 
     def __str__(self):
         return self.content
+    
+@receiver(post_save, sender=CampaignDonation)
+def update_campaign_amount_on_donation(sender, instance, created, **kwargs):
+    """Update campaign amount_raised when a donation is saved."""
+    instance.campaign.update_amount_raised()
+
+@receiver(post_delete, sender=CampaignDonation)
+def update_campaign_amount_on_donation_delete(sender, instance, **kwargs):
+    """Update campaign amount_raised when a donation is deleted."""
+    instance.campaign.update_amount_raised()
