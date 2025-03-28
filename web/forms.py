@@ -261,43 +261,49 @@ class CampaignForm(forms.ModelForm):
         model = Campaign
         fields = ["title", "description", "funding_goal", "itemized_budget", "video_url", "image"]
         widgets = {
-            "title": forms.TextInput(
+            "title": TailwindInput(
                 attrs={
-                    "placeholder": "Campaign Title",
-                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
+                    "placeholder": "Campaign Title"
                 }
             ),
-            "description": forms.Textarea(
+            "description": TailwindTextarea(
                 attrs={
                     "placeholder": "Describe your campaign in detail",
-                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
                 }
             ),
-            "funding_goal": forms.NumberInput(
+            "funding_goal": TailwindNumberInput(
                 attrs={
                     "placeholder": "Target funding amount in dollars",
-                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
                 }
             ),
-            "itemized_budget": forms.Textarea(
+            "itemized_budget": TailwindTextarea(
                 attrs={
-                    "placeholder": "Optional JSON field for itemized budget breakdown",
-                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
+                    "placeholder": "Optional JSON field for itemized budget breakdown"
                 }
             ),
-            "video_url": forms.URLInput(
+            "video_url": TailwindInput(
                 attrs={
+                    "type": "url",
                     "placeholder": "Optional video pitch URL",
-                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
                 }
             ),
-            "image": forms.ClearableFileInput(
+            "image": TailwindFileInput(
                 attrs={
-                    "class": "appearance-none block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                    "accept": "image/*",
                 }
             ),
         }
+    help_texts = {
+                "itemized_budget": "Enter a JSON object with budget items and costs",
+                "video_url": "Link to a video that explains your campaign",
+                "image": "Upload an image for your campaign (max size: 5MB)",
+        }
 
+    def clean_funding_goal(self):
+            funding_goal = self.cleaned_data.get("funding_goal")
+            if funding_goal <= 0:
+                raise forms.ValidationError("Funding goal must be greater than zero")
+            return funding_goal
 
 class AwardAchievementForm(forms.Form):
     student = forms.ModelChoiceField(

@@ -71,7 +71,7 @@ class Campaign(models.Model):
         self.save()
 
 
-class Donation(models.Model):
+class CampaignDonation(models.Model):
     """
     Model to record individual donations to a campaign.
     """

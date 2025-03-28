@@ -1221,11 +1221,14 @@ def stripe_webhook(request):
 
 
 def crowdfunding_detail(request, campaign_id):
-
     campaign = get_object_or_404(Campaign, id=campaign_id)
+    # Check if campaign is approved and live or if user has special access
+    if not (campaign.approved and campaign.live) and not (request.user.is_authenticated and (campaign.teacher == request.user or request.user.is_staff)):
+        messages.error(request, "This campaign is not available.")
+        return redirect("crowdfunding_list")
     context = {
         "campaign": campaign,
-    }
+        }
     return render(request, "crowdfunding_detail.html", context)
 
 
@@ -1237,30 +1240,28 @@ def crowdfunding_list(request):
     campaigns = Campaign.objects.filter(approved=True, live=True).order_by("-created_at")
     return render(request, "crowdfunding_list.html", {"campaigns": campaigns})
 
-
+@login_required
+@teacher_required
 def crowdfunding_create(request):
     """
     View to allow teachers to create a new crowdfunding campaign.
     """
-    # Ensure only teachers can create campaigns (if desired, add a check)
-    if not request.user.profile.is_teacher:
-        return redirect("index")  # Or show an error message
-
     if request.method == "POST":
         form = CampaignForm(request.POST, request.FILES)
         if form.is_valid():
             campaign = form.save(commit=False)
             campaign.teacher = request.user
-            # New campaigns start as unapproved and not live
-            campaign.approved = True
-            campaign.live = True
+            # Set initial approval status (set to False if admin approval is required)
+            campaign.approved = True  # or False if approval workflow is needed
+            campaign.live = True      # or False if campaigns shouldn't be live immediately
             campaign.save()
-            # Optionally, display a success message and redirect to campaign detail or list view
+            messages.success(request, "Your crowdfunding campaign has been created successfully!")
             return redirect("crowdfunding_detail", campaign_id=campaign.id)
+        else:
+            messages.error(request, "Please correct the errors below.")
     else:
         form = CampaignForm()
     return render(request, "crowdfunding_create.html", {"form": form})
-
 
 def handle_successful_payment(payment_intent):
     """Handle successful payment by enrolling the user in the course."""
@@ -2166,8 +2167,8 @@ def student_dashboard(request):
     return render(request, "dashboard/student.html", context)
 
 
-@login_required
-@teacher_required
+# @login_required
+# @teacher_required
 def teacher_dashboard(request):
     """Dashboard view for teachers showing their courses, student progress, and upcoming sessions."""
     courses = Course.objects.filter(teacher=request.user)
