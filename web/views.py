@@ -60,6 +60,7 @@ from .decorators import teacher_required
 from .forms import (
     AwardAchievementForm,
     BlogPostForm,
+    CampaignForm,
     ChallengeSubmissionForm,
     CourseForm,
     CourseMaterialForm,
@@ -100,6 +101,7 @@ from .models import (
     Badge,
     BlogComment,
     BlogPost,
+    Campaign,
     CartItem,
     Certificate,
     Challenge,
@@ -1216,6 +1218,48 @@ def stripe_webhook(request):
         handle_failed_payment(payment_intent)
 
     return HttpResponse(status=200)
+
+
+def crowdfunding_detail(request, campaign_id):
+
+    campaign = get_object_or_404(Campaign, id=campaign_id)
+    context = {
+        "campaign": campaign,
+    }
+    return render(request, "crowdfunding_detail.html", context)
+
+
+def crowdfunding_list(request):
+    """
+    Display all active crowdfunding campaigns.
+    Active campaigns are those that are approved and live.
+    """
+    campaigns = Campaign.objects.filter(approved=True, live=True).order_by("-created_at")
+    return render(request, "crowdfunding_list.html", {"campaigns": campaigns})
+
+
+def crowdfunding_create(request):
+    """
+    View to allow teachers to create a new crowdfunding campaign.
+    """
+    # Ensure only teachers can create campaigns (if desired, add a check)
+    if not request.user.profile.is_teacher:
+        return redirect("index")  # Or show an error message
+
+    if request.method == "POST":
+        form = CampaignForm(request.POST, request.FILES)
+        if form.is_valid():
+            campaign = form.save(commit=False)
+            campaign.teacher = request.user
+            # New campaigns start as unapproved and not live
+            campaign.approved = True
+            campaign.live = True
+            campaign.save()
+            # Optionally, display a success message and redirect to campaign detail or list view
+            return redirect("crowdfunding_detail", campaign_id=campaign.id)
+    else:
+        form = CampaignForm()
+    return render(request, "crowdfunding_create.html", {"form": form})
 
 
 def handle_successful_payment(payment_intent):

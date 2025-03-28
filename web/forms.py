@@ -14,6 +14,7 @@ from .models import (
     Achievement,
     Avatar,
     BlogPost,
+    Campaign,
     ChallengeSubmission,
     Course,
     CourseMaterial,
@@ -253,6 +254,49 @@ class UserRegistrationForm(SignupForm):
             email_address.send_confirmation(request)
 
         return user
+
+
+class CampaignForm(forms.ModelForm):
+    class Meta:
+        model = Campaign
+        fields = ["title", "description", "funding_goal", "itemized_budget", "video_url", "image"]
+        widgets = {
+            "title": forms.TextInput(
+                attrs={
+                    "placeholder": "Campaign Title",
+                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "placeholder": "Describe your campaign in detail",
+                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
+                }
+            ),
+            "funding_goal": forms.NumberInput(
+                attrs={
+                    "placeholder": "Target funding amount in dollars",
+                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
+                }
+            ),
+            "itemized_budget": forms.Textarea(
+                attrs={
+                    "placeholder": "Optional JSON field for itemized budget breakdown",
+                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
+                }
+            ),
+            "video_url": forms.URLInput(
+                attrs={
+                    "placeholder": "Optional video pitch URL",
+                    "class": "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none",
+                }
+            ),
+            "image": forms.ClearableFileInput(
+                attrs={
+                    "class": "appearance-none block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                }
+            ),
+        }
 
 
 class AwardAchievementForm(forms.Form):

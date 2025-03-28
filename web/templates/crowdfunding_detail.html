@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto p-6">
+  <div class="max-w-3xl mx-auto bg-white shadow p-6 rounded">
+    <h1 class="text-3xl font-bold mb-4">{{ campaign.title }}</h1>
+
+    {% if campaign.image %}
+      <img src="{{ campaign.image.url }}" alt="{{ campaign.title }}" class="w-full max-w-md mb-4">
+    {% endif %}
+
+    <p class="mb-4">{{ campaign.description }}</p>
+
+    <div class="mb-4">
+      <strong>Funding Goal:</strong> ${{ campaign.funding_goal }}
+    </div>
+    <div class="mb-4">
+      <strong>Amount Raised:</strong> ${{ campaign.amount_raised }}
+    </div>
+
+    {% if campaign.video_url %}
+      <div class="mb-4">
+        <strong>Video Pitch:</strong>
+        <div class="aspect-w-16 aspect-h-9">
+          <iframe src="{{ campaign.video_url }}" frameborder="0" allowfullscreen></iframe>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if campaign.itemized_budget %}
+      <div class="mb-4">
+        <strong>Itemized Budget:</strong>
+        <pre class="bg-gray-100 p-2 rounded">{{ campaign.itemized_budget|json_script:"itemizedBudget" }}</pre>
+      </div>
+    {% endif %}
+
+    <div class="mt-6">
+      <h2 class="text-xl font-semibold mb-2">Donate to this Campaign</h2>
+      <!-- Donation form placeholder; integrate with your payment system later -->
+      <form action="{% url 'create_donation_payment_intent' %}" method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="campaign_id" value="{{ campaign.id }}">
+        <label for="amount" class="block mb-1">Donation Amount ($):</label>
+        <input type="number" name="amount" id="amount" step="0.01" min="1" required class="border rounded p-2 w-full mb-4">
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+          Donate
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
