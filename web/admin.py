@@ -13,6 +13,7 @@ from .models import (
     Badge,
     BlogComment,
     BlogPost,
+    Campaign,
     Cart,
     CartItem,
     Challenge,
@@ -141,6 +142,13 @@ class EmailVerifiedFilter(admin.SimpleListFilter):
             # Users with no EmailAddress record
             return queryset.exclude(id__in=EmailAddress.objects.values_list("user_id", flat=True))
         return queryset
+
+
+@admin.register(Campaign)
+class CampaignAdmin(admin.ModelAdmin):
+    list_display = ("title", "teacher", "funding_goal", "amount_raised", "approved", "live", "created_at")
+    list_filter = ("approved", "live", "created_at")
+    search_fields = ("title", "description", "teacher__username")
 
 
 class CustomUserAdmin(BaseUserAdmin):

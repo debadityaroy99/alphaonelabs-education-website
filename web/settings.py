@@ -130,6 +130,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "web.context_processors.last_modified",
                 "web.context_processors.invitation_notifications",
+                "django.template.context_processors.csrf",
             ],
         },
     },
@@ -234,10 +235,11 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-if not DEBUG:
-    MEDIA_ROOT = "/home/alphaonelabs99282llkb/web/media"
-else:
-    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+# if not DEBUG:
+#     MEDIA_ROOT = "/home/alphaonelabs99282llkb/web/media"
+# else:
+#
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "/media/"
 
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
