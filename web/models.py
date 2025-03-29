@@ -13,7 +13,7 @@ from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.urls import reverse
 from django.utils import timezone
@@ -39,11 +39,9 @@ class Campaign(models.Model):
     amount_raised = models.DecimalField(
         max_digits=10, decimal_places=2, default=0, help_text="Total funds raised so far"
     )
-    itemized_budget = models.JSONField(
-        blank=True, null=True, help_text="Optional JSON field for itemized budget breakdown"
-    )
-    video_url = models.URLField(blank=True, null=True, help_text="Optional video pitch URL for the campaign")
-    image = models.ImageField(upload_to="campaign_images/", blank=True, null=True, help_text="Optional campaign image")
+    itemized_budget = models.JSONField(blank=True, help_text="Optional JSON field for itemized budget breakdown")
+    video_url = models.URLField(blank=True, help_text="Optional video pitch URL for the campaign")
+    image = models.ImageField(upload_to="campaign_images/", blank=True, help_text="Optional campaign image")
     approved = models.BooleanField(default=True, help_text="Indicates whether the campaign is approved by moderators")
     live = models.BooleanField(default=True, help_text="Indicates whether the campaign is live and accepting donations")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -2786,11 +2784,13 @@ class ScheduledPost(models.Model):
 
     def __str__(self):
         return self.content
-    
+
+
 @receiver(post_save, sender=CampaignDonation)
 def update_campaign_amount_on_donation(sender, instance, created, **kwargs):
     """Update campaign amount_raised when a donation is saved."""
     instance.campaign.update_amount_raised()
+
 
 @receiver(post_delete, sender=CampaignDonation)
 def update_campaign_amount_on_donation_delete(sender, instance, **kwargs):

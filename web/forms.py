@@ -261,11 +261,7 @@ class CampaignForm(forms.ModelForm):
         model = Campaign
         fields = ["title", "description", "funding_goal", "itemized_budget", "video_url", "image"]
         widgets = {
-            "title": TailwindInput(
-                attrs={
-                    "placeholder": "Campaign Title"
-                }
-            ),
+            "title": TailwindInput(attrs={"placeholder": "Campaign Title"}),
             "description": TailwindTextarea(
                 attrs={
                     "placeholder": "Describe your campaign in detail",
@@ -277,9 +273,7 @@ class CampaignForm(forms.ModelForm):
                 }
             ),
             "itemized_budget": TailwindTextarea(
-                attrs={
-                    "placeholder": "Optional JSON field for itemized budget breakdown"
-                }
+                attrs={"placeholder": "Optional JSON field for itemized budget breakdown"}
             ),
             "video_url": TailwindInput(
                 attrs={
@@ -293,17 +287,19 @@ class CampaignForm(forms.ModelForm):
                 }
             ),
         }
+
     help_texts = {
-                "itemized_budget": "Enter a JSON object with budget items and costs",
-                "video_url": "Link to a video that explains your campaign",
-                "image": "Upload an image for your campaign (max size: 5MB)",
-        }
+        "itemized_budget": "Enter a JSON object with budget items and costs",
+        "video_url": "Link to a video that explains your campaign",
+        "image": "Upload an image for your campaign (max size: 5MB)",
+    }
 
     def clean_funding_goal(self):
-            funding_goal = self.cleaned_data.get("funding_goal")
-            if funding_goal <= 0:
-                raise forms.ValidationError("Funding goal must be greater than zero")
-            return funding_goal
+        funding_goal = self.cleaned_data.get("funding_goal")
+        if funding_goal <= 0:
+            raise forms.ValidationError("Funding goal must be greater than zero")
+        return funding_goal
+
 
 class AwardAchievementForm(forms.Form):
     student = forms.ModelChoiceField(

@@ -1170,6 +1170,7 @@ def course_search(request):
 
     return render(request, "courses/search.html", context)
 
+
 @csrf_exempt  # For simplicity; in production, configure CSRF properly.
 def create_donation_intent(request, campaign_id):
     """
@@ -1177,7 +1178,7 @@ def create_donation_intent(request, campaign_id):
     """
     # Get the campaign
     campaign = get_object_or_404(Campaign, id=campaign_id)
-    
+
     # For simplicity, we assume the donation amount is sent via POST data as a float (in dollars)
     if request.method == "POST":
         try:
@@ -1204,6 +1205,7 @@ def create_donation_intent(request, campaign_id):
     else:
         # For non-POST requests, redirect back or render a page.
         return JsonResponse({"error": "POST method required"}, status=405)
+
 
 @login_required
 def create_payment_intent(request, slug):
@@ -1252,6 +1254,7 @@ def create_payment_intent(request, slug):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=403)
 
+
 def handle_successful_donation(payment_intent):
     """
     Handle a successful donation payment.
@@ -1265,21 +1268,21 @@ def handle_successful_donation(payment_intent):
             return
 
         # Convert amount from cents to dollars.
-        donation_amount = Decimal(payment_intent.amount_received) / 100
+        # donation_amount = Decimal(payment_intent.amount_received) / 100
 
         # Retrieve campaign and user.
         campaign = Campaign.objects.get(id=campaign_id)
-        user = User.objects.get(id=user_id)
+        # user = User.objects.get(id=user_id)
 
-        # Create the donation record.
-        donation = Donation.objects.create(
-            campaign=campaign,
-            donor_name=user.get_full_name() or user.username,
-            donor_email=user.email,
-            amount=donation_amount,
-            status="completed",  # or set appropriate status if your Donation model uses one
-            stripe_payment_intent_id=payment_intent.id,
-        )
+        # # Create the donation record.
+        # donation = Donation.objects.create(
+        #     campaign=campaign,
+        #     donor_name=user.get_full_name() or user.username,
+        #     donor_email=user.email,
+        #     amount=donation_amount,
+        #     status="completed",  # or set appropriate status if your Donation model uses one
+        #     stripe_payment_intent_id=payment_intent.id,
+        # )
 
         # Update the campaign's amount raised.
         campaign.update_amount_raised()
@@ -1342,17 +1345,15 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
-
 def crowdfunding_detail(request, campaign_id):
     campaign = get_object_or_404(Campaign, id=campaign_id)
     # Check if campaign is approved and live or if user has special access
-    if not (campaign.approved and campaign.live) and not (request.user.is_authenticated and (campaign.teacher == request.user or request.user.is_staff)):
+    if not (campaign.approved and campaign.live) and not (
+        request.user.is_authenticated and (campaign.teacher == request.user or request.user.is_staff)
+    ):
         messages.error(request, "This campaign is not available.")
         return redirect("crowdfunding_list")
-    context = {
-        "campaign": campaign,
-        "STRIPE_PUBLISHABLE_KEY": settings.STRIPE_PUBLISHABLE_KEY
-        }
+    context = {"campaign": campaign, "STRIPE_PUBLISHABLE_KEY": settings.STRIPE_PUBLISHABLE_KEY}
     return render(request, "crowdfunding_detail.html", context)
 
 
@@ -1363,6 +1364,7 @@ def crowdfunding_list(request):
     """
     campaigns = Campaign.objects.filter(approved=True, live=True).order_by("-created_at")
     return render(request, "crowdfunding_list.html", {"campaigns": campaigns})
+
 
 @login_required
 @teacher_required
@@ -1377,7 +1379,7 @@ def crowdfunding_create(request):
             campaign.teacher = request.user
             # Set initial approval status (set to False if admin approval is required)
             campaign.approved = True  # or False if approval workflow is needed
-            campaign.live = True      # or False if campaigns shouldn't be live immediately
+            campaign.live = True  # or False if campaigns shouldn't be live immediately
             campaign.save()
             messages.success(request, "Your crowdfunding campaign has been created successfully!")
             return redirect("crowdfunding_detail", campaign_id=campaign.id)
@@ -1386,6 +1388,7 @@ def crowdfunding_create(request):
     else:
         form = CampaignForm()
     return render(request, "crowdfunding_create.html", {"form": form})
+
 
 def handle_successful_payment(payment_intent):
     """Handle successful payment by enrolling the user in the course."""
