@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}{{ campaign.title }} - Donate{% endblock title %}
+
 {% block content %}
 <div class="container mx-auto p-6">
   <div class="max-w-3xl mx-auto bg-white shadow p-6 rounded">
@@ -34,19 +36,109 @@
       </div>
     {% endif %}
 
+    <!-- Donation Section -->
     <div class="mt-6">
       <h2 class="text-xl font-semibold mb-2">Donate to this Campaign</h2>
-      <!-- Donation form placeholder; integrate with your payment system later -->
-      <form action="{% url 'create_donation_payment_intent' %}" method="POST">
+      <form id="donation-form">
         {% csrf_token %}
-        <input type="hidden" name="campaign_id" value="{{ campaign.id }}">
-        <label for="amount" class="block mb-1">Donation Amount ($):</label>
-        <input type="number" name="amount" id="amount" step="0.01" min="1" required class="border rounded p-2 w-full mb-4">
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+        <input type="hidden" id="campaign_id" value="{{ campaign.id }}">
+        <label for="amount" class="block mb-1 text-gray-700">Donation Amount ($):</label>
+        <input type="number" id="amount" name="amount" step="0.01" min="1" required 
+               class="border rounded p-2 w-full mb-4">
+        <!-- Stripe Card Element Container -->
+        <div id="card-element" class="mb-4"></div>
+        <!-- Display errors from Stripe Element -->
+        <div id="card-errors" class="text-red-500 text-sm mb-4"></div>
+        <button type="button" id="donate-button"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded">
           Donate
         </button>
       </form>
     </div>
   </div>
 </div>
-{% endblock %}
+
+<!-- Stripe.js -->
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  // Helper function to get CSRF token from cookie.
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + "=")) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  var csrfToken = getCookie("csrftoken");
+
+  // Initialize Stripe with your publishable key.
+  var stripe = Stripe("{{ STRIPE_PUBLISHABLE_KEY }}");
+  var elements = stripe.elements();
+  var style = {
+    base: {
+      color: "#32325d",
+      fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+      fontSmoothing: "antialiased",
+      fontSize: "16px",
+      "::placeholder": { color: "#aab7c4" }
+    },
+    invalid: { color: "#fa755a", iconColor: "#fa755a" }
+  };
+  var card = elements.create("card", {style: style});
+  card.mount("#card-element");
+
+  card.on('change', function(event) {
+    var displayError = document.getElementById('card-errors');
+    displayError.textContent = event.error ? event.error.message : '';
+  });
+
+  document.getElementById('donate-button').addEventListener('click', function() {
+    var donationAmount = document.getElementById('amount').value;
+    if (!donationAmount || donationAmount <= 0) {
+      alert("Please enter a valid donation amount.");
+      return;
+    }
+    // Create PaymentIntent by calling our backend view.
+    fetch("{% url 'create_donation_intent' campaign_id=campaign.id %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken
+      },
+      body: JSON.stringify({ amount: donationAmount })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      stripe.confirmCardPayment(data.clientSecret, {
+        payment_method: {
+          card: card,
+          billing_details: {
+            name: "{{ request.user.get_full_name|default:request.user.username }}"
+          }
+        }
+      }).then(function(result) {
+        if (result.error) {
+          document.getElementById('card-errors').textContent = result.error.message;
+        } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+          window.location.href = "{% url 'donation_success' %}";
+        }
+      });
+    })
+    .catch(function(error) {
+      console.error("Error:", error);
+      alert("Payment processing error. Please try again.");
+    });
+  });
+</script>
+{% endblock content %}

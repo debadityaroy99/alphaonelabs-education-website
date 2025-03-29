@@ -1170,6 +1170,40 @@ def course_search(request):
 
     return render(request, "courses/search.html", context)
 
+@csrf_exempt  # For simplicity; in production, configure CSRF properly.
+def create_donation_intent(request, campaign_id):
+    """
+    Create a Stripe PaymentIntent for donating to a crowdfunding campaign.
+    """
+    # Get the campaign
+    campaign = get_object_or_404(Campaign, id=campaign_id)
+    
+    # For simplicity, we assume the donation amount is sent via POST data as a float (in dollars)
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            donation_amount = float(data.get("amount", 0))
+            if donation_amount <= 0:
+                return JsonResponse({"error": "Invalid donation amount."}, status=400)
+
+            # Convert dollars to cents for Stripe
+            amount_cents = int(donation_amount * 100)
+
+            # Create a PaymentIntent
+            intent = stripe.PaymentIntent.create(
+                amount=amount_cents,
+                currency="usd",
+                metadata={
+                    "campaign_id": campaign.id,
+                    "user_id": request.user.id,
+                },
+            )
+            return JsonResponse({"clientSecret": intent.client_secret})
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+    else:
+        # For non-POST requests, redirect back or render a page.
+        return JsonResponse({"error": "POST method required"}, status=405)
 
 @login_required
 def create_payment_intent(request, slug):
@@ -1218,6 +1252,63 @@ def create_payment_intent(request, slug):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=403)
 
+def handle_successful_donation(payment_intent):
+    """
+    Handle a successful donation payment.
+    Create a Donation record and update the campaign's amount raised.
+    """
+    try:
+        campaign_id = payment_intent.metadata.get("campaign_id")
+        user_id = payment_intent.metadata.get("user_id")
+        if not campaign_id or not user_id:
+            # Not a donation payment; you might log this or ignore.
+            return
+
+        # Convert amount from cents to dollars.
+        donation_amount = Decimal(payment_intent.amount_received) / 100
+
+        # Retrieve campaign and user.
+        campaign = Campaign.objects.get(id=campaign_id)
+        user = User.objects.get(id=user_id)
+
+        # Create the donation record.
+        donation = Donation.objects.create(
+            campaign=campaign,
+            donor_name=user.get_full_name() or user.username,
+            donor_email=user.email,
+            amount=donation_amount,
+            status="completed",  # or set appropriate status if your Donation model uses one
+            stripe_payment_intent_id=payment_intent.id,
+        )
+
+        # Update the campaign's amount raised.
+        campaign.update_amount_raised()
+
+        # Optionally, you can send a notification email to the donor or campaign teacher here.
+        # For example:
+        # send_donation_confirmation_email(user, campaign, donation)
+
+    except Exception as e:
+        # Log error if needed.
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error handling successful donation: {e}")
+
+
+def handle_failed_donation(payment_intent):
+    """
+    Handle a failed donation payment.
+    You can log the failure or notify the donor that the payment did not go through.
+    """
+    try:
+        campaign_id = payment_intent.metadata.get("campaign_id")
+        user_id = payment_intent.metadata.get("user_id")
+
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Donation payment failed for campaign {campaign_id} and user {user_id}.")
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error handling failed donation: {e}")
+
 
 @csrf_exempt
 def stripe_webhook(request):
@@ -1236,12 +1327,20 @@ def stripe_webhook(request):
 
     if event.type == "payment_intent.succeeded":
         payment_intent = event.data.object
-        handle_successful_payment(payment_intent)
+        # Check if this PaymentIntent is for a course or a donation.
+        if payment_intent.metadata.get("course_id"):
+            handle_successful_payment(payment_intent)
+        elif payment_intent.metadata.get("campaign_id"):
+            handle_successful_donation(payment_intent)
     elif event.type == "payment_intent.payment_failed":
         payment_intent = event.data.object
-        handle_failed_payment(payment_intent)
+        if payment_intent.metadata.get("course_id"):
+            handle_failed_payment(payment_intent)
+        elif payment_intent.metadata.get("campaign_id"):
+            handle_failed_donation(payment_intent)
 
     return HttpResponse(status=200)
+
 
 
 def crowdfunding_detail(request, campaign_id):
@@ -1252,6 +1351,7 @@ def crowdfunding_detail(request, campaign_id):
         return redirect("crowdfunding_list")
     context = {
         "campaign": campaign,
+        "STRIPE_PUBLISHABLE_KEY": settings.STRIPE_PUBLISHABLE_KEY
         }
     return render(request, "crowdfunding_detail.html", context)
 
